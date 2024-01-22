@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Assignment 5 with VR</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+
+  <script type="module" src="./src/main.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body>
+  <div class="grid grid-cols-3 h-full w-full">
+    <div class="col-span-2" id="asgn5">
+      <!-- Assignment 5 Stuff -->
+      <div id="scene-container" style="width: 60vw; height: 33.75vw">
+        <!-- Our <canvas> will be inserted here -->
+      </div>
+      <p>
+        Tree by Marc Solà <a href="https://creativecommons.org/licenses/by/3.0/">[CC-BY]</a> via <a
+          href="https://poly.pizza/m/6Yjt8nIwLsD">Poly Pizza</a>
+      </p>
+      <p>
+        All other textures and rock model from <a href="https://freepbr.com/">FreePBR</a>
+      </p>
+      <p>
+        Code structure inspired by tutorials from <a href="https://discoverthreejs.com/">DiscoverThreeJS</a>
+      </p>
+    </div>
+    <div class="col-span-1">
+      <!-- Painting Board -->
+      <div class="grid grid-cols-1 place-items-center h-full w-full">
+        <span class="text-4xl mb-6">Paint Program</span>
+
+
+        <canvas id="webgl" width="400px" height="400px">
+          Please use a browser that supports "canvas"
+        </canvas>
+        <button id="clear">Clear Canvas</button>
+        <p class="text-2xl m-5">Select Your Shape</p>
+        <div>
+          <button id="square">Square</button>
+          <button id="triangle">Triangle</button>
+          <button id="circle">Circle</button>
+          <button id="star">Star</button>
+          <button id="squirtle">Squirtle</button>
+        </div>
+        <p class="text-2xl m-5">Select Your Color</p>
+        <div>
+          <div>
+            Red
+            <input type="range" min="0" max="255" value="255" id="red">
+            <input type="number" value="255" id="red_text">
+          </div>
+          <div class="mt-2">
+            Green <input type="range" min="0" max="255" value="255" id="green">
+            <input type="number" value="255" id="green_text">
+          </div>
+          <div class="mt-2">
+            Blue <input type="range" min="0" max="255" value="255" id="blue">
+            <input type="number" value="255" id="blue_text">
+          </div>
+        </div>
+        <div class="mt-2 flex place-items-center gap-2">
+          <span>The Selected Color</span>
+          <div class="inline-block h-8 w-8 border border-black rounded-full" id="color_box"></div>
+        </div>
+        <p class="text-2xl m-5">Customize Shape</p>
+        <div class="mt-2">
+          Shape Size <input type="range" min="1" max="50" value="10" id="size">
+          <input type="number" value="10" id="size_text">
+        </div>
+        <div class="mt-2">
+          (Circles) Segment Count <input type="range" min="5" max="30" value="10" id="segments">
+          <input type="number" value="10" id="segments_text">
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="./asgn1/lib/webgl-utils.js"></script>
+  <script src="./asgn1/lib/webgl-debug.js"></script>
+  <script src="./asgn1/lib/cuon-utils.js"></script>
+  <script src="./asgn1/Point.js"></script>
+  <script src="./asgn1/Triangle.js"></script>
+  <script src="./asgn1/Circle.js"></script>
+  <script src="./asgn1/Star.js"></script>
+  <script src="./asgn1/Squirtle.js"></script>
+  <script src="./asgn1/asgn1.js"></script>
+</body>
+
+</html>
