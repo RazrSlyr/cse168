@@ -10,18 +10,27 @@ import { Loop } from './systems/Loop.js';
 import { getDrawingMaterial, getGrassMaterial, getSkyboxMaterial } from './components/materials.js';
 import { createSphere } from './components/sphere.js';
 import { createTree } from './components/tree.js';
-import { Vector3, CanvasTexture, MeshBasicMaterial, Object3D } from '../../lib/three.module.js';
+import { Vector3, CanvasTexture, MeshBasicMaterial, Object3D, BufferGeometry, Line } from '../../lib/three.module.js';
 import { createRock } from './components/rock.js';
 
 import { FogExp2 } from '../../lib/three.module.js';
 import { Lamp } from './components/Lamp.js';
 import { VRButton } from '../../lib/VRButton.js';
+import { XRControllerModelFactory } from '../../lib/XRControllerModelFactory.js';
+import { XRHandModelFactory } from '../../lib/XRHandModelFactory.js';
 
 let camera;
 let controls;
 let renderer;
 let scene;
 let loop;
+let hand1, hand2;
+let controller1, controller2;
+let controllerGrip1, controllerGrip2;
+const handModels = {
+  left: null,
+  right: null
+};
 
 class World {
   constructor(container) {
@@ -58,7 +67,7 @@ class World {
     sun.angle = 90;
     sun.distance = 10;
 
-    sun.tick = function(delta) {
+    sun.tick = function (delta) {
       sun.angle = (sun.angle + 20 * delta) % 360;
       sun.position.y = Math.sin(sun.angle / 180 * Math.PI) * sun.distance;
       sun.position.z = Math.cos(sun.angle / 180 * Math.PI) * sun.distance;
@@ -71,7 +80,7 @@ class World {
 
     // Fog that comes and goes
     scene.tick = (delta) => {
-      scene.fogDensity = Math.max(-1 * Math.sin(sun.angle / 180 * Math.PI)  / 30, 0);
+      scene.fogDensity = Math.max(-1 * Math.sin(sun.angle / 180 * Math.PI) / 30, 0);
       scene.fog = new FogExp2(fogColor, scene.fogDensity);
     }
 
@@ -97,7 +106,7 @@ class World {
     // Drawing Board
     const drawing = createBox(getDrawingMaterial());
     drawing.scale.set(3, 3, 0.1);
-    drawing.tick = function(delta) {
+    drawing.tick = function (delta) {
       const ctx = document.getElementById("webgl").getContext("webgl");
       const texture = new CanvasTexture(ctx.canvas);
       drawing.material.map = texture;
@@ -172,17 +181,107 @@ class World {
   stop() {
     loop.stop();
   }
-  
+
+  setupHands(controllerModelFactory, handModelFactory, dolly) {
+    // Hand 1
+
+    controllerGrip1 = renderer.xr.getControllerGrip(0);
+    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+    dolly.add(controllerGrip1);
+
+    hand1 = renderer.xr.getHand(0);
+    hand1.userData.currentHandModel = 0;
+    dolly.add(hand1);
+
+    handModels.left = [
+      handModelFactory.createHandModel(hand1, 'boxes'),
+      handModelFactory.createHandModel(hand1, 'spheres'),
+      handModelFactory.createHandModel(hand1, 'mesh')
+    ];
+
+    for (let i = 0; i < 3; i++) {
+
+      const model = handModels.left[i];
+      model.visible = i == 0;
+      hand1.add(model);
+
+    }
+
+    hand1.addEventListener('pinchend', function () {
+
+      handModels.left[this.userData.currentHandModel].visible = false;
+      this.userData.currentHandModel = (this.userData.currentHandModel + 1) % 3;
+      handModels.left[this.userData.currentHandModel].visible = true;
+
+    });
+
+    // Hand 2
+
+    controllerGrip2 = renderer.xr.getControllerGrip(1);
+    controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+    dolly.add(controllerGrip2);
+
+    hand2 = renderer.xr.getHand(1);
+    hand2.userData.currentHandModel = 0;
+    dolly.add(hand2);
+
+    handModels.right = [
+      handModelFactory.createHandModel(hand2, 'boxes'),
+      handModelFactory.createHandModel(hand2, 'spheres'),
+      handModelFactory.createHandModel(hand2, 'mesh')
+    ];
+
+    for (let i = 0; i < 3; i++) {
+
+      const model = handModels.right[i];
+      model.visible = i == 0;
+      hand2.add(model);
+
+    }
+
+    hand2.addEventListener('pinchend', function () {
+
+      handModels.right[this.userData.currentHandModel].visible = false;
+      this.userData.currentHandModel = (this.userData.currentHandModel + 1) % 3;
+      handModels.right[this.userData.currentHandModel].visible = true;
+
+    });
+  }
+
   setupVR() {
     // Setup webxr button
     renderer.xr.enabled = true;
     const enterVRButton = document.getElementById("asgn5").appendChild(VRButton.createButton(renderer));
     enterVRButton.style.backgroundColor = "#04E762";
 
+    // Setup Controller
+    controller1 = renderer.xr.getController(0);
+
+    controller2 = renderer.xr.getController(1);
+
+    const controllerModelFactory = new XRControllerModelFactory();
+    const handModelFactory = new XRHandModelFactory();
+
     // Setup dolly for moving the renderer
     const dolly = new Object3D();
     dolly.position.z = 5;
     dolly.add(camera);
+    dolly.add(controller1);
+    dolly.add(controller2);
+
+    // Setup Hands
+    this.setupHands(controllerModelFactory, handModelFactory, dolly);
+
+    // Setup hand lines
+    const geometry = new BufferGeometry().setFromPoints([new Vector3(0, 0, 0), new Vector3(0, 0, - 1)]);
+
+    const line = new Line(geometry);
+    line.name = 'line';
+    line.scale.z = 5;
+
+    controller1.add(line.clone());
+    controller2.add(line.clone());
+
     scene.add(dolly);
 
     const dummyCam = new Object3D();
