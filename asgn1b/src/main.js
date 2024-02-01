@@ -9,7 +9,6 @@ async function main() {
 
   // complete async tasks
   await world.init();
-  world.setupVR();  
 
   // start the animation loop
   world.start();
