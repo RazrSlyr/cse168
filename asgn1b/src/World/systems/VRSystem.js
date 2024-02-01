@@ -16,20 +16,21 @@ let INTERSECTION;
 let marker;
 const tempMatrix = new Matrix4();
 let raycaster;
+let intersected = [];
 
 let baseReferenceSpace;
-
 const heightOffset = -2.5;
 
 class VRSystem {
 
-    constructor(renderer, scene, ground) {
+    constructor(renderer, scene, ground, grabables) {
         this.renderer = renderer;
         this.scene = scene;
         this.ground = ground;
+        this.grabables = grabables;
     }
 
-    setupHands(controllerModelFactory, handModelFactory) {
+    #setupHands(controllerModelFactory, handModelFactory) {
         // Hand 1
 
         controllerGrip1 = this.renderer.xr.getControllerGrip(0);
@@ -95,7 +96,7 @@ class VRSystem {
         });
     }
 
-    buildController(data) {
+    #buildController(data) {
 
         let geometry, material;
 
@@ -109,21 +110,84 @@ class VRSystem {
 
                 material = new LineBasicMaterial({ vertexColors: true, blending: AdditiveBlending });
 
-                return new Line(geometry, material);
+                const line = new Line(geometry, material);
+                line.name = "ray";
+                return line;
 
             case 'gaze':
 
                 geometry = new RingGeometry(0.02, 0.04, 32).translate(0, 0, - 1);
                 material = new MeshBasicMaterial({ opacity: 0.5, transparent: true });
-                return new Mesh(geometry, material);
+                const gaze = new Mesh(geometry, material);
+                gaze.name = "ray";
+                return gaze;
 
         }
 
     }
+    
 
-    setupControllerEvents() {
-        const buildController = this.buildController;
-        const renderer = this.renderer;
+    #getIntersections(controller, grabables=this.grabables) {
+
+        controller.updateMatrixWorld();
+
+        tempMatrix.identity().extractRotation(controller.matrixWorld);
+
+        raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+        raycaster.ray.direction.set(0, 0, - 1).applyMatrix4(tempMatrix);
+
+        return raycaster.intersectObjects(grabables.children, false);
+
+    }
+
+
+    #setupControllerEvents() {
+        const buildController = this.#buildController;
+        const renderer = this.renderer
+        const getIntersections = this.#getIntersections;
+        const grabables = this.grabables;
+
+        function controllerOneOnSelectStart(event) {
+
+            const controller = event.target;
+    
+            const intersections = getIntersections(controller, grabables);
+    
+            if (intersections.length > 0) {
+    
+                const intersection = intersections[0];
+
+                if (intersection.distance > 3) {
+                    return;
+                }
+    
+                const object = intersection.object;
+                object.material.emissive.b = 1;
+                controller.attach(object);
+    
+                controller.userData.selected = object;
+    
+            }
+    
+            controller.userData.targetRayMode = event.data.targetRayMode;
+    
+        }
+    
+        function controllerOneOnSelectEnd(event) {
+    
+            const controller = event.target;
+    
+            if (controller.userData.selected !== undefined) {
+    
+                const object = controller.userData.selected;
+                object.material.emissive.b = 0;
+                grabables.attach(object);
+    
+                controller.userData.selected = undefined;
+    
+            }
+    
+        }
 
         function onSelectStart() {
             this.userData.isSelecting = true;
@@ -148,8 +212,8 @@ class VRSystem {
         }
 
         controller1 = this.renderer.xr.getController(0);
-        controller1.addEventListener('selectstart', onSelectStart);
-        controller1.addEventListener('selectend', onSelectEnd);
+        controller1.addEventListener('selectstart', controllerOneOnSelectStart);
+        controller1.addEventListener('selectend', controllerOneOnSelectEnd);
         controller1.addEventListener('connected', function (event) {
 
             this.add(buildController(event.data));
@@ -195,7 +259,7 @@ class VRSystem {
         const handModelFactory = new XRHandModelFactory();
 
         // Setup Hands
-        this.setupHands(controllerModelFactory, handModelFactory);
+        this.#setupHands(controllerModelFactory, handModelFactory);
 
         // Setup Teleport Marker
         marker = new Mesh(
@@ -208,7 +272,54 @@ class VRSystem {
         raycaster = new Raycaster();;
 
         // Setup Controller Events
-        this.setupControllerEvents();
+        this.#setupControllerEvents();
+    }
+
+    #intersectObjects(controller) {
+
+        // Do not highlight in mobile-ar
+
+        if (controller.userData.targetRayMode === 'screen') return;
+
+        // Do not highlight when already selected
+
+        if (controller.userData.selected !== undefined) return;
+
+        const ray = controller.getObjectByName('ray');
+        const intersections = this.#getIntersections(controller);
+
+        if (intersections.length > 0) {
+
+            const intersection = intersections[0];
+            if (intersection.distance > 3) {
+                return;
+            }
+
+            const object = intersection.object;
+            object.material.emissive.r = 1;
+            intersected.push(object);
+
+            if (ray !== undefined) {
+                ray.scale.z = intersection.distance;
+            }
+
+        } else {
+            if (ray !== undefined) {
+                ray.scale.z = 5;
+            }
+        }
+
+    }
+
+    #cleanIntersected() {
+
+        while (intersected.length) {
+
+            const object = intersected.pop();
+            object.material.emissive.r = 0;
+
+        }
+
     }
 
     render() {
@@ -251,6 +362,10 @@ class VRSystem {
         }
 
         marker.visible = INTERSECTION !== undefined;
+
+        this.#cleanIntersected();
+        this.#intersectObjects(controller1);
+
     }
 }
 

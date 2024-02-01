@@ -10,7 +10,7 @@ import { Loop } from './systems/Loop.js';
 import { getDrawingMaterial, getGrassMaterial, getSkyboxMaterial } from './components/materials.js';
 import { createSphere } from './components/sphere.js';
 import { createTree } from './components/tree.js';
-import { Vector3, CanvasTexture, MeshBasicMaterial, Matrix4 } from '../../lib/three.module.js';
+import { Vector3, CanvasTexture, MeshBasicMaterial, Matrix4, Group } from '../../lib/three.module.js';
 import { createRock } from './components/rock.js';
 
 import { FogExp2 } from '../../lib/three.module.js';
@@ -28,6 +28,8 @@ let vrSystem;
 
 let ground;
 
+let grabables;
+
 
 class World {
   constructor(container) {
@@ -35,6 +37,7 @@ class World {
     camera = createCamera();
     renderer = createRenderer();
     scene = createScene();
+    grabables = new Group();
 
     loop = new Loop(camera, scene, renderer, this.render);
     container.append(renderer.domElement);
@@ -113,7 +116,7 @@ class World {
     scene.add(ambientLight, mainLight, sky, ground, drawing, lamp, sun);
 
     const resizer = new Resizer(container, camera, renderer);
-    vrSystem = new VRSystem(renderer, scene, ground);
+    vrSystem = new VRSystem(renderer, scene, ground, grabables);
   }
 
   async init() {
@@ -164,8 +167,10 @@ class World {
       rocks[i].position.copy(rockPositions[i]);
       rocks[i].scale.set(0.01, 0.01, 0.01);
       rocks[i].castShadow = true;
-      scene.add(rocks[i]);
+      grabables.add(rocks[i]);
     }
+
+    scene.add(grabables);
 
     // Setup VR
     vrSystem.setupVR();

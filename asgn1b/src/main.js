@@ -9,6 +9,7 @@ async function main() {
 
   // complete async tasks
   await world.init();
+  await world.initPhysics();
 
   // start the animation loop
   world.start();
